@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D T-Rex Runner</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #87CEEB 0%, #E0F6FF 50%, #98FB98 100%);
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+            cursor: pointer;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 100;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+        }
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #333;
+            font-size: 18px;
+            z-index: 100;
+            background: rgba(255,255,255,0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #333;
+            font-size: 24px;
+            z-index: 100;
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            display: none;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui">
+            <div>Score: <span id="score">0</span></div>
+            <div>High Score: <span id="highScore">0</span></div>
+        </div>
+        <div id="instructions">
+            <h2>🦕 3D T-Rex Runner</h2>
+            <p>Press <strong>SPACE</strong> or <strong>CLICK</strong> to jump!</p>
+            <p>Avoid the cacti!</p>
+            <button onclick="startGame()">Start Game</button>
+        </div>
+        <div id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game variables
+        let scene, camera, renderer, trex, ground = [], obstacles = [], clouds = [];
+        let gameState = 'menu'; // menu, playing, gameOver
+        let score = 0, highScore = parseInt(localStorage.getItem('trexHighScore')) || 0;
+        let gameSpeed = 5, jumpVelocity = 0, gravity = 0.8;
+        let isJumping = false, groundY = 0;
+        let obstacleSpawnTimer = 0, lastTime = 0;
+        let gameRunning = false;
+
+        // Initialize the game
+        function init() {
+            const canvas = document.getElementById('gameCanvas');
+            
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x87CEEB, 30, 100);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(-8, 2, 0);
+            camera.lookAt(0, 1, 0);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x87CEEB);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            directionalLight.position.set(10, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+            directionalLight.shadow.camera.near = 0.1;
+            directionalLight.shadow.camera.far = 50;
+            directionalLight.shadow.camera.left = -20;
+            directionalLight.shadow.camera.right = 20;
+            directionalLight.shadow.camera.top = 20;
+            directionalLight.shadow.camera.bottom = -20;
+            scene.add(directionalLight);
+            
+            // Create T-Rex
+            createTRex();
+            
+            // Create ground
+            createGround();
+            
+            // Create initial clouds
+            for(let i = 0; i < 3; i++) {
+                createCloud(Math.random() * 50 - 25, Math.random() * 5 + 5, Math.random() * -50 - 10);
+            }
+            
+            // Update high score display
+            document.getElementById('highScore').textContent = highScore;
+            
+            // Event listeners
+            document.addEventListener('keydown', onKeyDown);
+            canvas.addEventListener('click', onCanvasClick);
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize);
+            
+            // Start render loop
+            animate();
+        }
+        
+        function createTRex() {
+            const trexGroup = new THREE.Group();
+            
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(1, 1.5, 0.8);
+            const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 1.25;
+            body.castShadow = true;
+            trexGroup.add(body);
+            
+            // Head
+            const headGeometry = new THREE.BoxGeometry(0.8, 0.8, 1);
+            const headMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.set(0, 2.2, 0.1);
+            head.castShadow = true;
+            trexGroup.add(head);
+            
+            // Eyes
+            const eyeGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+            const eyeMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
+            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            leftEye.position.set(-0.25, 2.35, 0.45);
+            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            rightEye.position.set(0.25, 2.35, 0.45);
+            trexGroup.add(leftEye);
+            trexGroup.add(rightEye);
+            
+            // Legs
+            const legGeometry = new THREE.BoxGeometry(0.3, 1.2, 0.3);
+            const legMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
+            const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+            leftLeg.position.set(-0.3, 0.1, 0);
+            leftLeg.castShadow = true;
+            const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+            rightLeg.position.set(0.3, 0.1, 0);
+            rightLeg.castShadow = true;
+            trexGroup.add(leftLeg);
+            trexGroup.add(rightLeg);
+            
+            // Small arms
+            const armGeometry = new THREE.BoxGeometry(0.15, 0.6, 0.15);
+            const armMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.set(-0.6, 1.4, 0);
+            leftArm.castShadow = true;
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.set(0.6, 1.4, 0);
+            rightArm.castShadow = true;
+            trexGroup.add(leftArm);
+            trexGroup.add(rightArm);
+            
+            // Tail
+            const tailGeometry = new THREE.BoxGeometry(0.4, 0.4, 1.5);
+            const tailMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
+            const tail = new THREE.Mesh(tailGeometry, tailMaterial);
+            tail.position.set(0, 1.2, -1.2);
+            tail.castShadow = true;
+            trexGroup.add(tail);
+            
+            trexGroup.position.set(0, groundY, 0);
+            scene.add(trexGroup);
+            trex = trexGroup;
+        }
+        
+        function createGround() {
+            // Create ground tiles
+            for(let i = 0; i < 20; i++) {
+                const groundGeometry = new THREE.PlaneGeometry(10, 10);
+                const groundMaterial = new THREE.MeshLambertMaterial({ color: 0xD2B48C });
+                const groundTile = new THREE.Mesh(groundGeometry, groundMaterial);
+                groundTile.rotation.x = -Math.PI / 2;
+                groundTile.position.set(0, groundY - 0.5, i * 10 - 50);
+                groundTile.receiveShadow = true;
+                scene.add(groundTile);
+                ground.push(groundTile);
+            }
+        }
+        
+        function createObstacle(z) {
+            const cactusGroup = new THREE.Group();
+            
+            // Main trunk
+            const trunkGeometry = new THREE.BoxGeometry(0.4, 2, 0.4);
+            const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.y = 1;
+            trunk.castShadow = true;
+            cactusGroup.add(trunk);
+            
+            // Random arms
+            if (Math.random() > 0.5) {
+                const armGeometry = new THREE.BoxGeometry(0.8, 0.2, 0.2);
+                const armMaterial = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+                const arm = new THREE.Mesh(armGeometry, armMaterial);
+                arm.position.set(0.6, 1.5, 0);
+                arm.castShadow = true;
+                cactusGroup.add(arm);
+            }
+            
+            cactusGroup.position.set(0, groundY, z);
+            scene.add(cactusGroup);
+            obstacles.push(cactusGroup);
+        }
+        
+        function createCloud(x, y, z) {
+            const cloudGroup = new THREE.Group();
+            
+            // Create cloud with multiple spheres
+            for (let i = 0; i < 4; i++) {
+                const sphereGeometry = new THREE.SphereGeometry(Math.random() * 0.3 + 0.2, 8, 8);
+                const sphereMaterial = new THREE.MeshLambertMaterial({ 
+                    color: 0xffffff, 
+                    transparent: true, 
+                    opacity: 0.7 
+                });
+                const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+                sphere.position.set(
+                    (Math.random() - 0.5) * 1.5,
+                    (Math.random() - 0.5) * 0.3,
+                    (Math.random() - 0.5) * 0.3
+                );
+                cloudGroup.add(sphere);
+            }
+            
+            cloudGroup.position.set(x, y, z);
+            scene.add(cloudGroup);
+            clouds.push(cloudGroup);
+        }
+        
+        function onKeyDown(event) {
+            if (event.code === 'Space') {
+                event.preventDefault();
+                jump();
+            }
+        }
+        
+        function onCanvasClick(event) {
+            jump();
+        }
+        
+        function jump() {
+            if (gameState === 'playing' && !isJumping) {
+                isJumping = true;
+                jumpVelocity = 15;
+            }
+        }
+        
+        function startGame() {
+            gameState = 'playing';
+            gameRunning = true;
+            document.getElementById('instructions').style.display = 'none';
+            score = 0;
+            gameSpeed = 5;
+            
+            // Clear existing obstacles
+            obstacles.forEach(obs => scene.remove(obs));
+            obstacles = [];
+            obstacleSpawnTimer = 0;
+            
+            // Reset T-Rex position
+            trex.position.y = groundY;
+            isJumping = false;
+            jumpVelocity = 0;
+        }
+        
+        function restartGame() {
+            gameState = 'playing';
+            gameRunning = true;
+            document.getElementById('gameOver').style.display = 'none';
+            score = 0;
+            gameSpeed = 5;
+            
+            // Clear existing obstacles
+            obstacles.forEach(obs => scene.remove(obs));
+            obstacles = [];
+            obstacleSpawnTimer = 0;
+            
+            // Reset T-Rex position
+            trex.position.y = groundY;
+            isJumping = false;
+            jumpVelocity = 0;
+        }
+        
+        function gameOver() {
+            gameState = 'gameOver';
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('gameOver').style.display = 'block';
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('trexHighScore', highScore.toString());
+                document.getElementById('highScore').textContent = highScore;
+            }
+        }
+        
+        function checkCollisions() {
+            if (!gameRunning || isJumping) return;
+            
+            const trexPosition = trex.position;
+            
+            for (let obstacle of obstacles) {
+                const distance = Math.abs(obstacle.position.z - trexPosition.z);
+                
+                // Check if obstacle is close to T-Rex
+                if (distance < 1.5 && obstacle.position.z <= trexPosition.z + 0.5) {
+                    gameOver();
+                    return;
+                }
+            }
+        }
+        
+        function update(deltaTime) {
+            if (gameState !== 'playing') return;
+            
+            // Update score
+            score += Math.floor(deltaTime * 10);
+            document.getElementById('score').textContent = score;
+            
+            // Increase game speed gradually
+            gameSpeed += deltaTime * 0.5;
+            
+            // Handle jumping
+            if (isJumping) {
+                trex.position.y += jumpVelocity * deltaTime;
+                jumpVelocity -= gravity;
+                
+                if (trex.position.y <= groundY) {
+                    trex.position.y = groundY;
+                    isJumping = false;
+                    jumpVelocity = 0;
+                }
+            }
+            
+            // Spawn obstacles
+            obstacleSpawnTimer += deltaTime;
+            if (obstacleSpawnTimer > 1.5 + Math.random()) {
+                createObstacle(-30 - Math.random() * 10);
+                obstacleSpawnTimer = 0;
+            }
+            
+            // Move obstacles toward camera
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obstacle = obstacles[i];
+                obstacle.position.z += gameSpeed * deltaTime;
+                
+                // Remove obstacles that have passed
+                if (obstacle.position.z > 10) {
+                    scene.remove(obstacle);
+                    obstacles.splice(i, 1);
+                }
+            }
+            
+            // Move ground tiles
+            for (let tile of ground) {
+                tile.position.z += gameSpeed * deltaTime;
+                if (tile.position.z > 50) {
+                    tile.position.z -= 200;
+                }
+            }
+            
+            // Move clouds
+            for (let i = clouds.length - 1; i >= 0; i--) {
+                const cloud = clouds[i];
+                cloud.position.z += gameSpeed * deltaTime * 0.3;
+                
+                if (cloud.position.z > 20) {
+                    scene.remove(cloud);
+                    clouds.splice(i, 1);
+                }
+            }
+            
+            // Spawn new clouds occasionally
+            if (Math.random() < 0.002) {
+                createCloud(
+                    Math.random() * 20 - 10,
+                    Math.random() * 3 + 5,
+                    -50
+                );
+            }
+            
+            // Check collisions
+            checkCollisions();
+            
+            // Simple running animation
+            const time = Date.now() * 0.005;
+            if (!isJumping) {
+                trex.children[3].rotation.x = Math.sin(time * 2) * 0.3; // Left leg
+                trex.children[4].rotation.x = Math.sin(time * 2 + Math.PI) * 0.3; // Right leg
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const currentTime = Date.now();
+            const deltaTime = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+            
+            update(deltaTime);
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Initialize the game when the page loads
+        window.addEventListener('load', function() {
+            init();
+            lastTime = Date.now();
+        });
+    </script>
+</body>
+</html>
