@@ -1,39 +1,339 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D T-Rex Runner</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #87CEEB 0%, #E0F6FF 50%, #98FB98 100%);
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
-        }
-        #gameContainer {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-        canvas {
-            display: block;
-            cursor: pointer;
-            width: 100% !important;
-            height: 100% !important;
-        }
-        #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #333;
-            font-size: 24px;
-            font-weight: bold;
-            z-index: 100;
-            text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
-        }
-        #instructions {
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Escape to Linux - Installation Guide</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+
+    body {
+      background: #050505;
+      color: white;
+      overflow-x: hidden;
+    }
+
+    section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    h1 {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      line-height: 1.2;
+    }
+
+    h2 {
+      font-size: 2.3rem;
+      margin-bottom: 40px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #fff;
+      position: relative;
+    }
+
+    h2::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 2px;
+      background: #00ff88;
+      margin: 10px auto 0 auto;
+    }
+
+    p {
+      max-width: 800px;
+      line-height: 1.8;
+      font-size: 1.2rem;
+      color: #cfcfcf;
+    }
+
+    .hero {
+      background: radial-gradient(circle at center, #111 0%, #000 70%);
+    }
+
+    .glow {
+      color: #00ff88;
+      text-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+    }
+
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      justify-content: center;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .card {
+      background: #0d0d0d;
+      border: 1px solid #1a1a1a;
+      border-radius: 20px;
+      width: 340px;
+      padding: 25px;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card:hover {
+      transform: translateY(-10px);
+      border-color: #00ff88;
+      box-shadow: 0 0 25px rgba(0,255,136,0.25);
+    }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .step-number {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #00ff88;
+      line-height: 1;
+    }
+
+    .card h3 {
+      font-size: 1.3rem;
+      color: #fff;
+    }
+
+    .card p {
+      font-size: 0.95rem;
+      color: #aaaaaa;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      flex-grow: 1;
+    }
+
+    .card-img {
+    width: auto;
+    height: auto;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid #222;
+      background: #151515;
+      transition: border-color 0.3s ease;
+    }
+
+    .card:hover .card-img {
+      border-color: #00ff88;
+    }
+
+    .terminal {
+      background: #080808;
+      border-radius: 15px;
+      padding: 30px;
+      width: 100%;
+      max-width: 750px;
+      text-align: left;
+      border: 1px solid #1a1a1a;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    }
+
+    .line {
+      font-family: 'Courier New', Courier, monospace;
+      color: #00ff88;
+      margin: 15px 0;
+      font-size: 1.05rem;
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 2px solid #00ff88;
+      width: 0;
+      opacity: 0;
+      animation: typing 2.5s steps(40, end) forwards;
+    }
+
+    .line:nth-child(1) { animation-delay: 0.5s; }
+    .line:nth-child(2) { animation-delay: 3.5s; }
+    .line:nth-child(3) { animation-delay: 6.5s; }
+    .line:nth-child(4) { animation-delay: 9.5s; border-right: none; }
+
+    @keyframes typing {
+      from { width: 0; opacity: 1; }
+      to { width: 100%; opacity: 1; }
+    }
+
+    .final {
+      background: linear-gradient(to bottom, #000, #04120a);
+    }
+
+    .quote {
+      font-size: 2.2rem;
+      color: #00ff88;
+      margin-top: 20px;
+      max-width: 900px;
+      font-weight: 300;
+      font-style: italic;
+    }
+
+    .credits {
+      margin-top: 40px;
+      font-size: 0.9rem;
+      color: #555;
+      letter-spacing: 1px;
+    }
+
+    button {
+      margin-top: 40px;
+      padding: 16px 40px;
+      border: none;
+      border-radius: 50px;
+      background: #00ff88;
+      color: black;
+      font-size: 1.1rem;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 25px rgba(0, 255, 136, 0.5);
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2.8rem;
+      }
+
+      h2 {
+        font-size: 1.8rem;
+        margin-bottom: 30px;
+      }
+
+      .quote {
+        font-size: 1.5rem;
+      }
+      
+      .terminal {
+        padding: 20px;
+      }
+      
+      .line {
+        font-size: 0.85rem;
+      }
+
+      .card {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <section class="hero">
+    <h1>Escape to <span class="glow">Linux</span></h1>
+    <p>
+      How to Install Linux: A definitive step-by-step guide to making your system faster, cleaner, and fully under your control.
+    </p>
+    <button onclick="document.getElementById('steps').scrollIntoView({behavior:'smooth'})">
+      Start Mission
+    </button>
+  </section>
+
+  <section id="steps">
+    <h2>Mission Steps</h2>
+    <div class="card-container">
+      
+      <div class="card">
+        <div class="step-header">
+          <h3>Get Required Files</h3>
+          <div class="step-number">1</div>
+        </div>
+        <p>Locate the official website for your chosen Linux distribution. Download the ISO file specific to your processor architecture.</p>
+        <img class="card-img" src="https://th.bing.com/th/id/R.9c15775c3d2d95032b150530f646bc68?rik=mA2T3%2fzr3tcr4w&pid=ImgRaw&r=0" alt="Download Linux ISO">
+      </div>
+
+      <div class="card">
+        <div class="step-header">
+          <h3>Download Utility</h3>
+          <div class="step-number">2</div>
+        </div>
+        <p>Download a utility to create a bootable USB flash drive, such as Rufus tool setup.</p>
+        <img class="card-img" src="https://th.bing.com/th/id/R.8554947344d6fba6f8923acd4f02d8a8?rik=zAPZSBqJoA0XhA&pid=ImgRaw&r=0" alt="Download Rufus">
+      </div>
+
+      <div class="card">
+        <div class="step-header">
+          <h3>Prepare USB Drive</h3>
+          <div class="step-number">3</div>
+        </div>
+        <p>Plug a USB flash drive into the computer (an 8GB stick is recommended). Open Rufus and select the correct flash drive from the "Device" menu.</p>
+        <img class="card-img" src="https://tse3.mm.bing.net/th/id/OIP.7v6sJ6FC_72S9REoT2G4wQHaHa?r=0&w=800&h=800&rs=1&pid=ImgDetMain&o=7&rm=3" alt="Insert USB Drive">
+      </div>
+
+      <div class="card">
+        <div class="step-header">
+          <h3>Configure & Flash</h3>
+          <div class="step-number">4</div>
+        </div>
+        <p>Click "Select" to choose your downloaded Linux ISO. Set the partition scheme to GPT for UEFI systems, or MBR for BIOS systems. Click "Start" until status is Ready.</p>
+        <img class="card-img" src="https://via.placeholder.com/340x160/111111/00ff88?text=4.+Rufus+Configuration" alt="Rufus Configuration">
+      </div>
+
+      <div class="card">
+        <div class="step-header">
+          <h3>Boot From USB</h3>
+          <div class="step-number">5</div>
+        </div>
+        <p>Restart your PC. Tap the boot menu key rapidly as the system powers back on (often F8, F11, or F12). Choose the USB drive using Arrow keys and press Enter.</p>
+        <img class="card-img" src="https://th.bing.com/th/id/R.1b20bb092e6d815f8e85cc1a40da8618?rik=p%2b%2fnPqt5jgzmOg&pid=ImgRaw&r=0" alt="BIOS Boot Menu">
+      </div>
+
+      <div class="card">
+        <div class="step-header">
+          <h3>Install OS</h3>
+          <div class="step-number">6</div>
+        </div>
+        <p>Wait for the Linux live environment or setup screen to load. Follow the installer guide and select your target drive when prompted for destination.</p>
+        <img class="card-img" src="https://via.placeholder.com/340x160/111111/00ff88?text=6.+Linux+Installation" alt="Linux Installation Setup">
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>System Terminal</h2>
+    <div class="terminal">
+      <div class="line">> Loading utility: Rufus 3.0.1304 active...</div>
+      <div class="line">> Mapping file: ubuntu-16.04-desktop-amd64.iso (1.5 GB)...</div>
+      <div class="line">> Formatting options applied: FAT32 (Default) filesystem...</div>
+      <div class="line">> Partition written: GPT/MBR mapping compiled... Status: READY</div>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2>Final Message</h2>
+    <p class="quote">
+      “Linux is not just an operating system. It’s control.”
+    </p>
+    <div class="credits">
+      Created by: Ayoob Ahmed & Hussain Ahmed
+    </div>
+  </section>
+
+</body>
+</html>
             position: absolute;
             top: 50%;
             left: 50%;
