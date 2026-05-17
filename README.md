@@ -1,1 +1,1 @@
-the hardest game
+install linux
